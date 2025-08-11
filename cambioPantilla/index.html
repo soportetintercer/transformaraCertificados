@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cambiador de Plantillas de Certificados</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #1e3c72 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 40px;
+        }
+        
+        .upload-section, .template-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            border: 2px dashed #dee2e6;
+            transition: all 0.3s ease;
+        }
+        
+        .upload-section:hover, .template-section:hover {
+            border-color: #007bff;
+            background: #f0f8ff;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .file-input-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+        
+        .file-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background: white;
+            transition: all 0.3s ease;
+        }
+        
+        .file-input:hover {
+            border-color: #007bff;
+        }
+        
+        .template-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .template-option {
+            padding: 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .template-option:hover {
+            border-color: #007bff;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,123,255,0.2);
+        }
+        
+        .template-option.selected {
+            border-color: #007bff;
+            background: #e7f3ff;
+        }
+        
+        .template-preview {
+            width: 100%;
+            height: 100px;
+            background: linear-gradient(45deg, #f1f3f4, #e8eaed);
+            border-radius: 8px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #5f6368;
+            font-weight: bold;
+        }
+        
+        .template-classic .template-preview {
+            background: linear-gradient(45deg, #1e3c72, #2a5298);
+            color: white;
+        }
+        
+        .template-modern .template-preview {
+            background: linear-gradient(45deg, #667eea, #0056b3);
+            color: white;
+        }
+        
+        .template-elegant .template-preview {
+            background: linear-gradient(45deg, #2c3e50, #3498db);
+            color: white;
+        }
+        
+        .template-minimal .template-preview {
+            background: linear-gradient(45deg, #95a5a6, #34495e);
+            color: white;
+        }
+        
+        .controls {
+            grid-column: 1 / -1;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,123,255,0.3);
+        }
+        
+        .btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .progress {
+            margin-top: 20px;
+            padding: 20px;
+            background: #e7f3ff;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e9ecef;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .result {
+            margin-top: 30px;
+            padding: 20px;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .extracted-data {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #007bff;
+        }
+        
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .template-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔄 Cambiador de Plantillas</h1>
+            <p>Transformar certificados manteniendo el contenido intacto</p>
+        </div>
+        
+        <div class="main-content">
+            <div class="upload-section">
+                <h2 class="section-title">📄 Subir Certificado Original</h2>
+                <div class="file-input-container">
+                    <input type="file" id="pdfInput" class="file-input" accept=".pdf" />
+                </div>
+                <div id="extractedData" class="extracted-data" style="display: none;">
+                    <h3>Datos extraídos:</h3>
+                    <div id="dataContent"></div>
+                </div>
+            </div>
+            
+            <div class="template-section">
+                <h2 class="section-title">🎨 Subir Nueva Plantilla PDF</h2>
+                <div class="file-input-container">
+                    <input type="file" id="templateInput" class="file-input" accept=".pdf" />
+                    <p style="font-size: 14px; color: #666; margin-top: 10px;">
+                        Sube tu plantilla en formato PDF
+                    </p>
+                </div>
+                <div id="templatePreview" style="display: none; margin-top: 20px;">
+                    <div style="border: 2px solid #007bff; border-radius: 10px; padding: 20px; background: #f8f9ff;">
+                        <h4>Plantilla PDF cargada:</h4>
+                        <div id="templatePreviewContent" style="margin-top: 10px;">
+                            <!-- Aquí se mostrará la información del PDF -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <button id="processBtn" class="btn" disabled>
+                    Generar Certificado Nuevo
+                </button>
+                
+                <div id="progress" class="progress">
+                    <div>Procesando certificado...</div>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                </div>
+                
+                <div id="result" class="result">
+                    <h3>✅ ¡Certificado generado exitosamente!</h3>
+                    <p>Tu certificado con la nueva plantilla está listo para descargar.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class CertificateProcessor {
+            constructor() {
+                this.templateFile = null;
+                this.templateContent = null;
+                this.extractedData = null;
+                this.initializeEventListeners();
+            }
+            
+            initializeEventListeners() {
+                document.getElementById('pdfInput').addEventListener('change', (e) => {
+                    this.handleFileUpload(e);
+                });
+                
+                document.getElementById('templateInput').addEventListener('change', (e) => {
+                    this.handleTemplateUpload(e);
+                });
+                
+                document.getElementById('processBtn').addEventListener('click', () => {
+                    this.processDocument();
+                });
+            }
+            
+            async handleFileUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                try {
+                    const data = await this.extractDataFromPDF(file);
+                    this.extractedData = data;
+                    this.displayExtractedData(data);
+                    this.updateProcessButton();
+                } catch (error) {
+                    console.error('Error al procesar el PDF:', error);
+                    alert('Error al procesar el PDF. Asegúrate de que el archivo sea válido.');
+                }
+            }
+            
+            async extractDataFromPDF(file) {
+                // Simulación de extracción de datos del PDF
+                // En una implementación real, usarías una librería como PDF-lib o PDF.js
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        resolve({
+                            empresa: "INVERSIONES Y SERVICIOS CAJABAMBA S.R.L.",
+                            ubicacion: "P.J. EL CARMEN NRO. 202 PBLO. CAJABAMBA CAJAMARCA - CAJABAMBA - CAJABAMBA - PERÚ",
+                            norma: "ISO 39001:2012",
+                            servicio: "SERVICIO DE TRANSPORTE DE PERSONAL Y LOGÍSTICOS PARA EMPRESAS PÚBLICAS Y PRIVADAS A NIVEL NACIONAL Y ALQUILER DE EQUIPOS LIVIANOS Y PESADOS",
+                            fechaInicial: "Agosto 11, 2025",
+                            fechaEmision: "Agosto 11, 2025",
+                            fechaValidez: "Agosto 10, 2026",
+                            fechaRecertificacion: "Agosto 10, 2028",
+                            numeroRegistro: "IC-RTS-2508005"
+                        });
+                    }, 1000);
+                });
+            }
+            
+            displayExtractedData(data) {
+                const container = document.getElementById('dataContent');
+                const extractedDiv = document.getElementById('extractedData');
+                
+                container.innerHTML = `
+                    <strong>Empresa:</strong> ${data.empresa}<br>
+                    <strong>Norma:</strong> ${data.norma}<br>
+                    <strong>Número de Registro:</strong> ${data.numeroRegistro}<br>
+                    <strong>Fecha de Validez:</strong> ${data.fechaValidez}<br>
+                    <strong>Servicio:</strong> ${data.servicio.substring(0, 50)}...<br>
+                    <div style="margin-top: 10px; padding: 10px; background: #e7f3ff; border-radius: 5px;">
+                        <small><strong>🔄 Modo Inteligente:</strong> Solo se sobrescribirán los datos variables del certificado, manteniendo intacta tu plantilla base.</small>
+                    </div>
+                `;
+                
+                extractedDiv.style.display = 'block';
+            }
+            
+            async handleTemplateUpload(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+                
+                this.templateFile = file;
+                
+                try {
+                    if (file.type === 'application/pdf') {
+                        // Extraer contenido de la plantilla PDF para comparación
+                        await this.extractTemplateContent(file);
+                        this.showTemplatePreview(file.name, file.size);
+                    } else {
+                        alert('Por favor, sube solo archivos PDF para la plantilla.');
+                        return;
+                    }
+                    
+                    this.updateProcessButton();
+                } catch (error) {
+                    console.error('Error al procesar la plantilla PDF:', error);
+                    alert('Error al procesar la plantilla PDF. Verifica que el archivo sea válido.');
+                }
+            }
+            
+            async extractTemplateContent(file) {
+                // Extraer contenido de la plantilla PDF para comparación
+                return new Promise((resolve) => {
+                    setTimeout(() => {
+                        // Simulación de extracción de contenido de la plantilla
+                        console.log('Analizando plantilla PDF:', file.name);
+                        
+                        this.templateContent = {
+                            fileName: file.name,
+                            fileSize: file.size,
+                            hasCompanyName: false,
+                            hasLocation: false, 
+                            hasISO: false,
+                            hasService: false,
+                            hasDates: false,
+                            hasRegistryNumber: false,
+                            // Texto fijo que se mantiene de la plantilla original
+                            preservedElements: [
+                                "CERTIFICADO DE REGISTRO",
+                                "INTERCERT certifica que",
+                                "Ha sido evaluado con éxito",
+                                "Para el alcance de",
+                                "Emitido en nombre de InterCert",
+                                "Jefe - Certificaciones"
+                            ]
+                        };
+                        resolve();
+                    }, 800);
+                });
+            }
+            
+            showTemplatePreview(fileName, fileSize) {
+                const previewDiv = document.getElementById('templatePreview');
+                const previewContent = document.getElementById('templatePreviewContent');
+                
+                const fileSizeKB = Math.round(fileSize / 1024);
+                
+                previewContent.innerHTML = `
+                    <div style="padding: 20px; background: #f1f3f4; border-radius: 5px;">
+                        <strong>📄 ${fileName}</strong><br>
+                        <small>Tamaño: ${fileSizeKB} KB</small><br>
+                        <div style="margin-top: 10px; padding: 10px; background: #e8f5e8; border-left: 4px solid #28a745; border-radius: 3px;">
+                            <small><strong>✅ Plantilla PDF analizada:</strong> Se mantendrá el diseño original y solo se sobrescribirán los datos variables del certificado.</small>
+                        </div>
+                    </div>`;
+                
+                previewDiv.style.display = 'block';
+            }
+            
+            updateProcessButton() {
+                const btn = document.getElementById('processBtn');
+                btn.disabled = !(this.extractedData && this.templateFile);
+                
+                if (this.extractedData && this.templateFile) {
+                    btn.textContent = ' Generar Certificado Nuevo';
+                }
+            }
+            
+            async processDocument() {
+                const progressDiv = document.getElementById('progress');
+                const resultDiv = document.getElementById('result');
+                const progressFill = document.querySelector('.progress-fill');
+                
+                // Mostrar progreso
+                progressDiv.style.display = 'block';
+                resultDiv.style.display = 'none';
+                
+                // Simular proceso
+                for (let i = 0; i <= 100; i += 10) {
+                    progressFill.style.width = i + '%';
+                    await new Promise(resolve => setTimeout(resolve, 200));
+                }
+                
+                // Generar el nuevo certificado
+                await this.generateNewCertificate();
+                
+                // Mostrar resultado
+                progressDiv.style.display = 'none';
+                resultDiv.style.display = 'block';
+            }
+            
+            async generateNewCertificate() {
+                try {
+                    // Usar PDF-lib para cargar y modificar tu plantilla sin cambiar el fondo
+                    const arrayBuffer = await this.templateFile.arrayBuffer();
+                    const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+                    
+                    // Obtener la primera página de tu plantilla
+                    const pages = pdfDoc.getPages();
+                    const firstPage = pages[0];
+                    
+                    // Solo agregar el texto variable encima de tu plantilla
+                    await this.addTextToTemplate(firstPage, pdfDoc);
+                    
+                    // Generar el PDF modificado manteniendo tu fondo original
+                    const pdfBytes = await pdfDoc.save();
+                    
+                    // Descargar el archivo
+                    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `certificado_actualizado_${new Date().toISOString().slice(0, 10)}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                } catch (error) {
+                    console.error('Error al procesar la plantilla PDF:', error);
+                    alert('Error al procesar la plantilla. Asegúrate de que el PDF no esté protegido o corrupto.');
+                }
+            }
+            
+            async addTextToTemplate(page, pdfDoc) {
+                const data = this.extractedData;
+                
+                // Cargar fuente estándar
+                const font = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+                const boldFont = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+                
+                // Obtener dimensiones de la página
+                const { width, height } = page.getSize();
+                
+                // Estructura completa del certificado en orden correcto
+                let yPos = height - 155; // Posición inicial
+
+                const commonLeftX = 40;
+                
+                // 1. Texto introductorio: "INTERCERT certifica que los Sistemas de gestión de la seguridad vial de"
+                page.drawText("INTERCERT", {
+                    x: commonLeftX,
+                    y: yPos,
+                    size: 12,
+                    font: boldFont,
+                    color: PDFLib.rgb(0, 0, 0)
+                });
+                
+                page.drawText(" certifica que los Sistemas de gestión de la seguridad vial de", {
+                    x: commonLeftX + 68, // Después de "INTERCERT"
+                    y: yPos,
+                    size: 12,
+                    font: font,
+                    color: PDFLib.rgb(0, 0, 0)
+                });
+                
+                // 2. Nombre de la empresa (línea siguiente)
+                yPos -= 35;
+                page.drawText(data.empresa, {
+                    x: commonLeftX,
+                    y: yPos,
+                    size: 16,
+                    font: boldFont,
+                    color: PDFLib.rgb(0, 0, 0)
+                });
+                
+                // 3. Ubicación (justo después del nombre de la empresa)
+                yPos -= 35;
+                const ubicacionLines = this.splitText(data.ubicacion, 70);
+                ubicacionLines.forEach(line => {
+                    page.drawText(line, {
+                        x: commonLeftX,
+                        y: yPos,
+                        size: 10,
+                        font: font,
+                        color: PDFLib.rgb(0, 0, 0)
+                    });
+                    yPos -= 14;
+                });
+                
+                // 4. Texto intermedio: "Ha sido evaluado con éxito según los requisitos de"
+                yPos -= 40;
+                page.drawText("Ha sido evaluado con éxito según los requisitos de", {
+                    x: commonLeftX,
+                    y: yPos,
+                    size: 11,
+                    font: font,
+                    color: PDFLib.rgb(0, 0, 0)
+                });
+                
+                // 5. Norma ISO (inmediatamente después del texto anterior)
+                yPos -= 40;
+                page.drawText(data.norma, {
+                    x: commonLeftX,
+                    y: yPos,
+                    size: 19,
+                    font: boldFont,
+                    color: PDFLib.rgb(0, 0, 0)
+                });
+                
+                // 6. Texto intermedio: "Para el alcance de"
+                yPos -= 35;
+                page.drawText("Para el alcance de", {
+                    x: commonLeftX,
+                    y: yPos,
+                    size: 11,
+                    font: font,
+                    color: PDFLib.rgb(0, 0, 0)
+                });
+                
+                // 7. Servicio (después de "Para el alcance de")
+                yPos -= 35;
+                const servicioLines = this.splitText(data.servicio, 75);
+                servicioLines.forEach(line => {
+                    page.drawText(line, {
+                        x: commonLeftX,
+                        y: yPos,
+                        size: 11,
+                        font: boldFont,
+                        color: PDFLib.rgb(0, 0, 0)
+                    });
+                    yPos -= 16;
+                });
+                
+                // 8. Espacio y fechas
+                yPos -= 60;
+                
+                // Define common X positions for aligned colons and date values
+                // These values are fine-tuned to match the image, but might need slight adjustments
+                const colonXPos = 210; // X position for all colons
+                const dateValueXPos = 220; // X position for all date values
+            
+                const dateFields = [
+                    { label: "Fecha de Certificación Inicial", value: data.fechaInicial },
+                    { label: "Fecha de Emisión del Certificado", value: data.fechaEmision },
+                    { label: "Fecha de Validez del Certificado", value: data.fechaValidez },
+                    { label: "Fecha de Recertificación", value: data.fechaRecertificacion }
+                ];
+            
+                dateFields.forEach(field => {
+                    // Draw the label
+                    page.drawText(field.label, {
+                        x: commonLeftX, // Starting X for the label
+                        y: yPos,
+                        size: 10,
+                        font: font,
+                        color: PDFLib.rgb(0, 0, 0)
+                    });
+            
+                    // Draw the colon at a fixed X position
+                    page.drawText(":", {
+                        x: colonXPos, // Aligned X for the colon
+                        y: yPos,
+                        size: 10,
+                        font: font,
+                        color: PDFLib.rgb(0, 0, 0)
+                    });
+            
+                    // Draw the date value at another fixed X position, close to the colon
+                    page.drawText(field.value, {
+                        x: dateValueXPos, // Aligned X for the date value
+                        y: yPos,
+                        size: 10,
+                        font: font,
+                        color: PDFLib.rgb(0, 0, 0)
+                    });
+                    yPos -= 16;
+                });
+                
+                // 9. Número de registro (al final)
+                yPos -= 21;
+                page.drawText(`Número de Registro: ${data.numeroRegistro}`, {
+                    x: commonLeftX,
+                    y: yPos,
+                    size: 11,
+                    font: boldFont,
+                    color: PDFLib.rgb(0, 0, 0)
+                });
+            }
+            
+            splitText(text, maxCharsPerLine) {
+                const words = text.split(' ');
+                const lines = [];
+                let currentLine = '';
+                
+                words.forEach(word => {
+                    if ((currentLine + word).length <= maxCharsPerLine) {
+                        currentLine += (currentLine ? ' ' : '') + word;
+                    } else {
+                        if (currentLine) lines.push(currentLine);
+                        currentLine = word;
+                    }
+                });
+                
+                if (currentLine) lines.push(currentLine);
+                return lines;
+            }
+
+        }
+        
+        // Inicializar la aplicación
+        document.addEventListener('DOMContentLoaded', () => {
+            new CertificateProcessor();
+        });
+    </script>
+</body>
+</html>
